@@ -1,0 +1,10 @@
+{
+  "extensionDescription": {
+    "description": "Extension description",
+    "message": "DOMinator is a powerful Chrome extension designed to assist developers and security professionals in testing and identifying DOM-based Cross-Site Scripting (XSS) vulnerabilities on websites."
+  },
+  "extensionName": {
+    "description": "Extension name",
+    "message": "DOMinator"
+  }
+}
