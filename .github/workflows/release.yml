@@ -1,12 +1,13 @@
-name: Test
+name: Release
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
+    tags:
+      - "v*.*.*"
 
 jobs:
-  test:
+  build:
+
     runs-on: ubuntu-latest
 
     steps:
@@ -24,4 +25,8 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
-      - run: yarn test
+      - run: yarn build
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: dist/*

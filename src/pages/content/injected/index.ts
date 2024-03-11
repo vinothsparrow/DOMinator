@@ -1,5 +1,7 @@
 window.addEventListener('DOMinator-SendMessage', function (event: CustomEvent) {
-  chrome.runtime.sendMessage(event.detail);
+  if (chrome.runtime?.id) {
+    chrome.runtime.sendMessage(event.detail);
+  }
 });
 
 const script = document.createElement('script');
