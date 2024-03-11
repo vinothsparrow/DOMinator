@@ -40,7 +40,8 @@ function clearListeners(tabId) {
 
 function refreshBadgeCount() {
   const msgCount = tab_messages[selectedTabId] ? tab_messages[selectedTabId].length : 0;
-  const listenerCount = tab_listeners[selectedTabId] ? tab_listeners[selectedTabId] : 0;
+  const listenerCount = tab_listeners[selectedTabId] ? tab_listeners[selectedTabId].length : 0;
+  console.log(msgCount, listenerCount);
   chrome.tabs.get(selectedTabId, function () {
     if (msgCount == MAX_MESSAGES) {
       chrome.action.setBadgeText({ text: MAX_MESSAGES.toString() + '+', tabId: selectedTabId });

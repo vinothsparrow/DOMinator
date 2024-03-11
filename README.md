@@ -2,7 +2,7 @@
 <img src="public/icon128.png" alt="logo"/>
 <h1>DOMinator</h1>
 
-![GitHub action badge](https://github.com/vinothsparrow/DOMinator/actions/workflows/build-zip.yml/badge.svg)
+![GitHub action badge](https://github.com/vinothsparrow/DOMinator/actions/workflows/release.yml/badge.svg)
 
 </div>
 
