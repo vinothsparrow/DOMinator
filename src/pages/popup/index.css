@@ -1,8 +1,13 @@
+html,
 body {
-  width: 350px;
-  height: 260px;
+  width: 400px;
+  height: 580px;
   margin: 0;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  position: relative;
+}
+
+#app-container {
+  height: 100%;
 }

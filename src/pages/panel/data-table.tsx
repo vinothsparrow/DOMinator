@@ -1,88 +1,100 @@
 import {
   ColumnDef,
-  ColumnFiltersState,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
+  getSortedRowModel,
+  SortingState,
   useReactTable,
 } from '@tanstack/react-table';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@src/components/ui/table';
 import React from 'react';
-import { Input } from '@src/components/ui/input';
+import { cn } from '@src/lib/utils';
+
+/** Per-column layout classes, set through `meta` on a column definition. */
+interface ColumnMeta {
+  className?: string;
+}
 import { DataTablePagination } from '@src/pages/panel/data-table-pagination';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  /** Filters and actions rendered above the table. */
+  toolbar?: React.ReactNode;
+  /** Rendered instead of the table body when there is nothing to show. */
+  empty?: React.ReactNode;
+  onRowClick?: (row: TData) => void;
+  isRowActive?: (row: TData) => boolean;
+  /** Passed through to columns via `table.options.meta`. */
+  meta?: Record<string, unknown>;
 }
 
-export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+  toolbar,
+  empty,
+  onRowClick,
+  isRowActive,
+  meta,
+}: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    state: {
-      columnFilters,
-    },
+    onSortingChange: setSorting,
+    state: { sorting },
+    meta,
+    initialState: { pagination: { pageSize: 25 } },
   });
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-none pt-2 pb-4 flex items-center justify-between">
-        <div className="flex flex-1 items-center space-x-2">
-          {table.getColumn('message') && (
-            <Input
-              placeholder="Filter messages..."
-              value={(table.getColumn('message')?.getFilterValue() as string) ?? ''}
-              onChange={event => table.getColumn('message')?.setFilterValue(event.target.value)}
-              className="h-8 w-[150px] lg:w-[250px]"
-            />
-          )}
-          {table.getColumn('listener') && (
-            <Input
-              placeholder="Filter listeners..."
-              value={(table.getColumn('listener')?.getFilterValue() as string) ?? ''}
-              onChange={event => table.getColumn('listener')?.setFilterValue(event.target.value)}
-              className="h-8 w-[150px] lg:w-[250px]"
-            />
-          )}
-        </div>
-      </div>
-      <div className="rounded-md border flex-grow overflow-auto">
+    <div className="flex h-full flex-col gap-2">
+      {toolbar}
+      <div className="min-h-0 flex-grow overflow-auto rounded-lg border">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur">
             {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map(header => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  );
-                })}
+                {headerGroup.headers.map(header => (
+                  <TableHead
+                    key={header.id}
+                    className={cn(
+                      'h-9 px-3 text-[11px] uppercase tracking-wide',
+                      (header.column.columnDef.meta as ColumnMeta)?.className,
+                    )}>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className="w-full overflow-auto select-text">
+          <TableBody className="select-text">
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map(row => (
-                <TableRow className="cursor-pointer" key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                <TableRow
+                  key={row.id}
+                  onClick={() => onRowClick?.(row.original)}
+                  className={cn('cursor-pointer align-top', isRowActive?.(row.original) && 'bg-accent/60')}>
                   {row.getVisibleCells().map(cell => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                    <TableCell
+                      key={cell.id}
+                      className={cn('px-3 py-2', (cell.column.columnDef.meta as ColumnMeta)?.className)}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={columns.length} className="p-0">
+                  {empty ?? <div className="py-10 text-center text-sm text-muted-foreground">No results.</div>}
                 </TableCell>
               </TableRow>
             )}
