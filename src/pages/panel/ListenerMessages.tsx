@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
+
+import { PanelTableFeatures } from './table-features';
 import { Braces, Frame, Package, ShieldAlert, ShieldCheck } from 'lucide-react';
 import withSuspense from '@src/shared/hoc/withSuspense';
 import withErrorBoundary from '@src/shared/hoc/withErrorBoundary';
@@ -24,7 +26,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@src/components/ui
 import { DataTable } from './data-table';
 import { FilterChip, PanelShell, PanelToolbar } from './PanelShell';
 
-export const columns: ColumnDef<ExtensionListenerMessage>[] = [
+export const columns: ColumnDef<PanelTableFeatures, ExtensionListenerMessage>[] = [
   {
     accessorKey: 'time',
     meta: { className: 'w-px whitespace-nowrap' },

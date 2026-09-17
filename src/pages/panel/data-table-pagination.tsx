@@ -1,15 +1,15 @@
 import { ChevronLeftIcon, ChevronRightIcon, DoubleArrowLeftIcon, DoubleArrowRightIcon } from '@radix-ui/react-icons';
-import { Table } from '@tanstack/react-table';
+import { PanelTable } from './table-features';
 
 import { Button } from '@src/components/ui/button';
 
 interface DataTablePaginationProps<TData> {
-  table: Table<TData>;
+  table: PanelTable<TData>;
 }
 
 export function DataTablePagination<TData>({ table }: DataTablePaginationProps<TData>) {
-  const { pageIndex, pageSize } = table.getState().pagination;
-  const total = table.getFilteredRowModel().rows.length;
+  const { pageIndex, pageSize } = table.state.pagination;
+  const total = table.getPrePaginatedRowModel().rows.length;
 
   return (
     <div className="flex flex-none items-center justify-between gap-4 px-1 pb-1 text-xs text-muted-foreground">

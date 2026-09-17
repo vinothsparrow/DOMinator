@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
+
+import { PanelTableFeatures } from './table-features';
 import { ArrowDownLeft, ArrowUpRight, Crosshair, Frame, Inbox, Send, ShieldAlert, Target } from 'lucide-react';
 import withSuspense from '@src/shared/hoc/withSuspense';
 import withErrorBoundary from '@src/shared/hoc/withErrorBoundary';
@@ -33,7 +35,7 @@ interface MessageTableMeta {
   onReplay?: (message: ExtensionPostMessage) => void;
 }
 
-export const columns: ColumnDef<ExtensionPostMessage>[] = [
+export const columns: ColumnDef<PanelTableFeatures, ExtensionPostMessage>[] = [
   {
     accessorKey: 'time',
     meta: { className: 'w-px whitespace-nowrap' },

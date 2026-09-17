@@ -1,12 +1,6 @@
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-} from '@tanstack/react-table';
+import { ColumnDef, flexRender, SortingState, useTable } from '@tanstack/react-table';
+
+import { panelTableFeatures, PanelTableFeatures } from './table-features';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@src/components/ui/table';
 import React from 'react';
@@ -19,7 +13,7 @@ interface ColumnMeta {
 import { DataTablePagination } from '@src/pages/panel/data-table-pagination';
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+  columns: ColumnDef<PanelTableFeatures, TData, TValue>[];
   data: TData[];
   /** Filters and actions rendered above the table. */
   toolbar?: React.ReactNode;
@@ -42,16 +36,14 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  const table = useReactTable({
+  const table = useTable({
+    features: panelTableFeatures,
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     state: { sorting },
     meta,
-    initialState: { pagination: { pageSize: 25 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 25 } },
   });
 
   return (

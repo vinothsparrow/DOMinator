@@ -39,7 +39,7 @@ function init() {
   const root = createRoot(appContainer);
   root.render(
     <ThemeProvider>
-      <RouterProvider router={router} fallbackElement={<p>Loading...</p>} />
+      <RouterProvider router={router} />
     </ThemeProvider>,
   );
 }

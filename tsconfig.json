@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "noEmit": true,
-    "baseUrl": ".",
     "allowJs": false,
     "target": "esnext",
     "module": "esnext",
@@ -9,21 +8,23 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
-    "types": ["vite/client", "node"],
+    "moduleResolution": "bundler",
+    // TypeScript 7 enables "strict" by default; this project has never been
+    // strict-clean, so keep it off explicitly rather than change behaviour here.
+    "strict": false,
+    "types": ["chrome", "node"],
     "noFallthroughCasesInSwitch": true,
     "allowSyntheticDefaultImports": true,
     "lib": ["dom", "dom.iterable", "esnext"],
     "forceConsistentCasingInFileNames": true,
-    "typeRoots": ["./src/global.d.ts", "node_modules/@types"],
     "paths": {
       "@root/*": ["./*"],
-      "@src/*": ["src/*"],
-      "@assets/*": ["src/assets/*"],
-      "@pages/*": ["src/pages/*"],
+      "@src/*": ["./src/*"],
+      "@assets/*": ["./src/assets/*"],
+      "@pages/*": ["./src/pages/*"],
       "virtual:reload-on-update-in-background-script": ["./src/global.d.ts"],
       "virtual:reload-on-update-in-view": ["./src/global.d.ts"]
     }
   },
-  "include": ["src", "utils", "vite.config.ts", "node_modules/@types"]
+  "include": ["src", "utils", "vite.config.ts"]
 }
