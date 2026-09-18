@@ -31,6 +31,7 @@ import { ListenerItem, MessageItem } from '@src/components/dominator/items';
 import { ThemeToggle } from '@src/components/dominator/ThemeToggle';
 import { Brand } from '@src/components/dominator/Brand';
 import { FrameSelect } from '@src/components/dominator/FrameSelect';
+import { SiteToggle } from '@src/components/dominator/SiteToggle';
 
 type Tab = 'messages' | 'listeners';
 type Direction = 'all' | 'sent' | 'received';
@@ -42,7 +43,7 @@ const directionFilters: { value: Direction; label: string; icon?: typeof ArrowUp
 ];
 
 const Popup = () => {
-  const { messages, listeners, url, connected, clear } = useDominator('popup');
+  const { messages, listeners, url, tabId, connected, clear } = useDominator('popup');
   const [tab, setTab] = useState<Tab>('messages');
   const [query, setQuery] = useState('');
   const [direction, setDirection] = useState<Direction>('all');
@@ -85,7 +86,11 @@ const Popup = () => {
         <ThemeToggle />
       </header>
 
-      <div className="flex gap-1.5 px-3 pt-2.5">
+      <div className="px-3 pt-2.5">
+        <SiteToggle url={url} tabId={tabId} />
+      </div>
+
+      <div className="flex gap-1.5 px-3 pt-2">
         <StatCard
           icon={Inbox}
           label="Messages"

@@ -15,7 +15,10 @@ const manifest = {
   name: '__MSG_extensionName__',
   version: packageJson.version,
   description: '__MSG_extensionDescription__',
-  permissions: ['storage', 'activeTab'],
+  permissions: ['storage', 'activeTab', 'scripting'],
+  // Required to register the content script dynamically; the static
+  // `content_scripts` entry it replaces already implied the same access.
+  host_permissions: ['http://*/*', 'https://*/*'],
   options_page: 'src/pages/options/index.html',
   background: {
     service_worker: 'src/pages/background/index.js',
@@ -35,14 +38,9 @@ const manifest = {
     16: 'icon16.png',
     48: 'icon48.png',
   },
-  content_scripts: [
-    {
-      all_frames: true,
-      matches: ['http://*/*', 'https://*/*'],
-      js: ['src/pages/contentInjected/index.js'],
-      run_at: 'document_start',
-    },
-  ],
+  // No static `content_scripts`: the background worker registers it at runtime
+  // so per-site exclusions can be applied as `excludeMatches`.
+  // See src/pages/background/registration.ts.
   devtools_page: 'src/pages/devtools/index.html',
   web_accessible_resources: [
     {

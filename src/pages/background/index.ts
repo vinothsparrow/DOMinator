@@ -5,6 +5,7 @@ import {
   ExtensionPostMessage,
   SinkFlow,
 } from '@src/shared/types/message';
+import { watchExclusions } from './registration';
 
 const MAX_RECORDS = 500;
 /** How long a send stays pairable with the receive it produced. */
@@ -187,3 +188,5 @@ chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
   if (tabs[0]) selectedTabId = tabs[0].id;
   refreshBadgeCount();
 });
+
+watchExclusions();
