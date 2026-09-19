@@ -16,10 +16,12 @@ import {
   Zap,
 } from 'lucide-react';
 import { cn } from '@src/lib/utils';
-import { ExtensionListenerMessage, ExtensionPostMessage, SinkFlow } from '@src/shared/types/message';
-import { formatSize, formatTime, hostOf, riskDotClass, summarizeWrappers } from '@src/shared/lib/format';
+import { ExtensionListenerMessage, ExtensionPostMessage, OriginCheckKind, SinkFlow } from '@src/shared/types/message';
+import { formatSize, formatTime, hostOf, originCheckOf, riskDotClass, summarizeWrappers } from '@src/shared/lib/format';
+import { originCheckLabel } from '@src/shared/lib/originCheck';
 import { Chip, CodeBlock, CopyButton, RiskBadge, RiskDot, SourceLink } from './primitives';
 import { PocPanel } from './PocPanel';
+import { DiffView, JsonHighlight } from './DiffView';
 
 /** Confirmed source-to-sink flows: the payload actually reached a sink. */
 function FlowList({ flows }: { flows: SinkFlow[] }) {
@@ -33,6 +35,11 @@ function FlowList({ flows }: { flows: SinkFlow[] }) {
         <div key={flow.id} className="flex flex-wrap items-center gap-1.5">
           <Chip className="border-red-500/40 bg-red-500/10 font-mono text-red-600 dark:text-red-400">{flow.sink}</Chip>
           <SourceLink source={flow.source} />
+          {flow.blocked && (
+            <Chip className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+              blocked {flow.blockedReason ? `· ${flow.blockedReason}` : 'CSP / Trusted Types'}
+            </Chip>
+          )}
           <span className="w-full break-all pl-1 font-mono text-[10px] text-muted-foreground">
             {flow.value.length > 120 ? flow.value.slice(0, 120) + '…' : flow.value}
           </span>
@@ -56,6 +63,42 @@ function StackList({ frames }: { frames?: ExtensionPostMessage['stack'] }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+function originCheckChip(listener: ExtensionListenerMessage) {
+  const kind: OriginCheckKind = originCheckOf(listener);
+  if (kind === 'strict') {
+    return (
+      <Chip className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+        <ShieldCheck className="h-2.5 w-2.5" />
+        {originCheckLabel(kind)}
+      </Chip>
+    );
+  }
+  if (kind === 'bypassable') {
+    return (
+      <Chip
+        className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+        title={listener.originCheckDetail}>
+        <ShieldAlert className="h-2.5 w-2.5" />
+        {originCheckLabel(kind)}
+      </Chip>
+    );
+  }
+  if (kind === 'source') {
+    return (
+      <Chip className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+        <ShieldAlert className="h-2.5 w-2.5" />
+        {originCheckLabel(kind)}
+      </Chip>
+    );
+  }
+  return (
+    <Chip className="border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400">
+      <ShieldAlert className="h-2.5 w-2.5" />
+      {originCheckLabel(kind)}
+    </Chip>
   );
 }
 
@@ -104,13 +147,28 @@ export function MessageDetails({
           <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Payload</span>
           <CopyButton value={message.message} label="Copy payload" />
         </div>
-        <CodeBlock className="text-emerald-700 dark:text-emerald-300">{message.message || '(empty payload)'}</CodeBlock>
+        {message.dataType === 'string' ? (
+          <CodeBlock className="text-emerald-700 dark:text-emerald-300">{message.message || '(empty payload)'}</CodeBlock>
+        ) : (
+          <JsonHighlight text={message.message || 'null'} />
+        )}
       </div>
+      {message.flows && message.flows[0] && message.flows[0].value !== message.message && (
+        <DiffView before={message.message} after={message.flows[0].value} afterLabel="Reached sink" />
+      )}
 
       <div className="space-y-1">
         <Field label="From" value={message.from} />
         <Field label="To" value={message.to} />
         {message.targetOrigin && <Field label="targetOrigin" value={message.targetOrigin} />}
+        {message.channel && message.channel !== 'window' && <Field label="Channel" value={message.channel} />}
+        {message.presentedOrigin && <Field label="Presented origin" value={message.presentedOrigin} />}
+        {message.taintSource && <Field label="Source" value={message.taintSource} />}
+        {message.transfer && message.transfer.length > 0 && <Field label="Transfer" value={message.transfer.join(', ')} />}
+        {message.listenerHits && message.listenerHits.length > 0 && (
+          <Field label="Listeners hit" value={message.listenerHits.join(', ')} />
+        )}
+        {message.leaks && message.leaks.length > 0 && <Field label="Leaks" value={message.leaks.join(', ')} />}
       </div>
 
       <div className="space-y-1">
@@ -241,7 +299,13 @@ export function MessageItem({
   );
 }
 
-export function ListenerDetails({ listener }: { listener: ExtensionListenerMessage }) {
+export function ListenerDetails({
+  listener,
+  messages = [],
+}: {
+  listener: ExtensionListenerMessage;
+  messages?: import('@src/shared/types/message').ExtensionPostMessage[];
+}) {
   return (
     <div className="space-y-3">
       <div className="space-y-1">
@@ -273,6 +337,15 @@ export function ListenerDetails({ listener }: { listener: ExtensionListenerMessa
 
       <div className="space-y-1">
         <Field label="Document" value={listener.origin} />
+        <Field label="Origin check" value={originCheckLabel(originCheckOf(listener))} />
+        {listener.originCheckDetail && <Field label="Detail" value={listener.originCheckDetail} />}
+        <Field
+          label="Hits"
+          value={`${listener.hitCount ?? 0} messages${listener.confirmedCount ? `, ${listener.confirmedCount} confirmed` : ''}${listener.seen && listener.seen > 1 ? `, registered ×${listener.seen}` : ''}`}
+        />
+        {listener.via && listener.via !== 'addEventListener' && <Field label="Via" value={listener.via} />}
+        {listener.channel && listener.channel !== 'window' && <Field label="Channel" value={listener.channel} />}
+        {listener.removed && <Field label="Status" value="removed" />}
       </div>
       <div className="space-y-1">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -282,7 +355,7 @@ export function ListenerDetails({ listener }: { listener: ExtensionListenerMessa
       </div>
 
       <div className="border-t pt-3">
-        <PocPanel listener={listener} />
+        <PocPanel listener={listener} messages={messages} />
       </div>
     </div>
   );
@@ -337,17 +410,14 @@ export function ListenerItem({ listener }: { listener: ExtensionListenerMessage 
               bound / native
             </Chip>
           )}
-          {listener.checksOrigin ? (
-            <Chip className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-              <ShieldCheck className="h-2.5 w-2.5" />
-              origin checked
-            </Chip>
-          ) : (
-            <Chip className="border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400">
-              <ShieldAlert className="h-2.5 w-2.5" />
-              no origin check
+          {originCheckChip(listener)}
+          {(listener.hitCount || 0) > 0 && (
+            <Chip>
+              {listener.hitCount} hit{listener.hitCount === 1 ? '' : 's'}
+              {listener.confirmedCount ? ` · ${listener.confirmedCount} confirmed` : ''}
             </Chip>
           )}
+          {listener.removed && <Chip>removed</Chip>}
         </div>
 
         {listener.sinks.length > 0 && (

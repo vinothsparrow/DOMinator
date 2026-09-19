@@ -12,6 +12,17 @@ import {
   resolveRules,
   setRuleEnabled,
 } from '@src/shared/storages/exclusions';
+import {
+  DEFAULT_INSTRUMENTATION,
+  instrumentationStorage,
+  mergeInstrumentation,
+  SINK_KEYS,
+  SINK_LABELS,
+  SOURCE_KEYS,
+  SOURCE_LABELS,
+  SinkKey,
+  SourceKey,
+} from '@src/shared/storages/instrumentation';
 import { ThemeToggle } from '@src/components/dominator/ThemeToggle';
 import { BrandMark } from '@src/components/dominator/Brand';
 import { Switch } from '@src/components/dominator/Switch';
@@ -47,6 +58,76 @@ function RuleRow({ rule, onToggle, onRemove }: { rule: ExclusionRule; onToggle: 
   );
 }
 
+function InstrumentationSettings() {
+  const raw = useStorage(instrumentationStorage);
+  const config = mergeInstrumentation(raw);
+  const set = (patch: Partial<typeof config>) => {
+    void instrumentationStorage.set({ ...config, ...patch });
+  };
+
+  return (
+    <section className="mb-8">
+      <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Instrumentation</h2>
+      <p className="mb-3 text-sm text-muted-foreground">
+        Disable a sink if it breaks the page (eval and setTimeout are the usual suspects). Source toggles control which
+        values are seeded into the taint tracker. Live probe / intercept switches also live in the DevTools panel.
+      </p>
+
+      <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Sinks</h3>
+      <ul className="mb-4 rounded-lg border">
+        {SINK_KEYS.filter(key => key !== 'outerHTML').map(key => (
+          <li key={key} className="flex items-center gap-3 border-b px-3 py-2 last:border-b-0">
+            <span className="min-w-0 flex-1 text-sm">{SINK_LABELS[key as SinkKey]}</span>
+            <Switch
+              on={config.sinks[key as SinkKey] !== false}
+              onChange={next => set({ sinks: { ...config.sinks, [key]: next } })}
+              label={`Toggle ${SINK_LABELS[key as SinkKey]}`}
+            />
+          </li>
+        ))}
+      </ul>
+
+      <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Sources</h3>
+      <ul className="mb-4 rounded-lg border">
+        {SOURCE_KEYS.map(key => (
+          <li key={key} className="flex items-center gap-3 border-b px-3 py-2 last:border-b-0">
+            <span className="min-w-0 flex-1 text-sm">{SOURCE_LABELS[key as SourceKey]}</span>
+            <Switch
+              on={config.sources[key as SourceKey] !== false}
+              onChange={next => set({ sources: { ...config.sources, [key]: next } })}
+              label={`Toggle ${SOURCE_LABELS[key as SourceKey]}`}
+            />
+          </li>
+        ))}
+      </ul>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="space-y-1">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Min taint length</span>
+          <input
+            type="number"
+            min={1}
+            value={config.minTaint}
+            onChange={event => set({ minTaint: Number(event.target.value) || DEFAULT_INSTRUMENTATION.minTaint })}
+            className="h-9 w-full rounded-md border bg-background px-3 font-mono text-xs outline-none"
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Taint TTL (ms)</span>
+          <input
+            type="number"
+            min={1000}
+            step={1000}
+            value={config.taintTtl}
+            onChange={event => set({ taintTtl: Number(event.target.value) || DEFAULT_INSTRUMENTATION.taintTtl })}
+            className="h-9 w-full rounded-md border bg-background px-3 font-mono text-xs outline-none"
+          />
+        </label>
+      </div>
+    </section>
+  );
+}
+
 const Options = () => {
   const state = useStorage(exclusionStorage);
   const [draft, setDraft] = useState('');
@@ -76,7 +157,7 @@ const Options = () => {
           <BrandMark className="h-9 w-9" />
           <div className="flex-1">
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">DOMinator</p>
-            <h1 className="text-lg font-semibold leading-tight tracking-tight">Exclusions</h1>
+            <h1 className="text-lg font-semibold leading-tight tracking-tight">Settings</h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
               DOMinator hooks <code className="font-mono text-[12px]">postMessage</code> and{' '}
               <code className="font-mono text-[12px]">addEventListener</code> in the page. Some widgets detect that and
@@ -86,8 +167,10 @@ const Options = () => {
           <ThemeToggle />
         </header>
 
+        <InstrumentationSettings />
+
         <section className="mb-6">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Built in</h2>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Built in exclusions</h2>
           <ul className="rounded-lg border">
             {builtIns.map(rule => (
               <RuleRow key={rule.id} rule={rule} onToggle={() => setRuleEnabled(rule.id, !rule.enabled)} />

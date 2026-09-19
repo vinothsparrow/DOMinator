@@ -19,6 +19,7 @@ import {
   countRisky,
   downloadJson,
   hostOf,
+  isEmptyMessage,
   listenerHaystack,
   listenerInFrame,
   matchesQuery,
@@ -55,6 +56,7 @@ const Popup = () => {
 
   const visibleMessages = useMemo(() => {
     return messages
+      .filter(message => !isEmptyMessage(message))
       .filter(message => direction === 'all' || message.direction === direction)
       .filter(message => messageInFrame(message, frame))
       .filter(message => !riskyOnly || message.risk === 'high')

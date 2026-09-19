@@ -11,14 +11,18 @@ import {
   collectFrames,
   countRisky,
   downloadJson,
+  downloadText,
   formatTime,
   hostOf,
   listenerHaystack,
   listenerInFrame,
   matchesQuery,
+  originCheckOf,
   RISK_ORDER,
   summarizeWrappers,
 } from '@src/shared/lib/format';
+import { originCheckLabel } from '@src/shared/lib/originCheck';
+import { buildReport, sessionDump } from '@src/shared/lib/report';
 import { Chip, EmptyState, RiskBadge, SourceLink } from '@src/components/dominator/primitives';
 import { ListenerDetails } from '@src/components/dominator/items';
 import { FrameSelect } from '@src/components/dominator/FrameSelect';
@@ -65,18 +69,24 @@ export const columns: ColumnDef<PanelTableFeatures, ExtensionListenerMessage>[] 
     accessorKey: 'checksOrigin',
     meta: { className: 'w-px whitespace-nowrap' },
     header: 'Origin check',
-    cell: ({ row }) =>
-      row.original.checksOrigin ? (
-        <Chip className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-          <ShieldCheck className="h-2.5 w-2.5" />
-          checked
+    cell: ({ row }) => {
+      const kind = originCheckOf(row.original);
+      const danger = kind === 'none' || kind === 'bypassable' || kind === 'source';
+      return (
+        <Chip
+          title={row.original.originCheckDetail}
+          className={
+            danger
+              ? kind === 'none'
+                ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400'
+                : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+          }>
+          {danger ? <ShieldAlert className="h-2.5 w-2.5" /> : <ShieldCheck className="h-2.5 w-2.5" />}
+          {originCheckLabel(kind)}
         </Chip>
-      ) : (
-        <Chip className="border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400">
-          <ShieldAlert className="h-2.5 w-2.5" />
-          missing
-        </Chip>
-      ),
+      );
+    },
   },
   {
     accessorKey: 'sinks',
@@ -136,10 +146,12 @@ export const columns: ColumnDef<PanelTableFeatures, ExtensionListenerMessage>[] 
 ];
 
 const ListenerMessages = () => {
-  const { messages, listeners, url, connected, clear } = useDominator('devtools');
+  const { messages, listeners, intercepts, pollutions, clobbers, url, connected, clear, resolveIntercept, importSession } =
+    useDominator('devtools');
   const [query, setQuery] = useState('');
   const [riskyOnly, setRiskyOnly] = useState(false);
   const [unchecked, setUnchecked] = useState(false);
+  const [bypassable, setBypassable] = useState(false);
   const [frame, setFrame] = useState('');
   const [selected, setSelected] = useState<ExtensionListenerMessage | null>(null);
 
@@ -149,11 +161,12 @@ const ListenerMessages = () => {
       listeners
         .filter(listener => listenerInFrame(listener, frame))
         .filter(listener => !riskyOnly || listener.risk === 'high')
-        .filter(listener => !unchecked || !listener.checksOrigin)
+        .filter(listener => !unchecked || originCheckOf(listener) === 'none')
+        .filter(listener => !bypassable || originCheckOf(listener) === 'bypassable' || originCheckOf(listener) === 'source')
         .filter(listener => matchesQuery(listenerHaystack(listener), query))
         .slice()
         .sort((a, b) => RISK_ORDER[a.risk] - RISK_ORDER[b.risk] || b.time - a.time),
-    [listeners, riskyOnly, unchecked, query, frame],
+    [listeners, riskyOnly, unchecked, bypassable, query, frame],
   );
 
   return (
@@ -162,10 +175,26 @@ const ListenerMessages = () => {
       messageCount={messages.length}
       listenerCount={listeners.length}
       riskyCount={countRisky(messages, listeners)}
+      findingCount={pollutions.length + clobbers.length + messages.filter(m => m.leaks?.length).length}
       url={url}
       connected={connected}
+      intercepts={intercepts}
       onClear={clear}
-      onExport={() => downloadJson(`dominator-${hostOf(url)}-${Date.now()}.json`, { url, messages, listeners })}>
+      onExport={() =>
+        downloadJson(
+          `dominator-${hostOf(url)}-${Date.now()}.json`,
+          sessionDump(url, messages, listeners, pollutions, clobbers),
+        )
+      }
+      onReport={() =>
+        downloadText(
+          `dominator-${hostOf(url)}-${Date.now()}.md`,
+          buildReport(sessionDump(url, messages, listeners, pollutions, clobbers)),
+          'text/markdown',
+        )
+      }
+      onImport={importSession}
+      onResolveIntercept={resolveIntercept}>
       <DataTable
         columns={columns}
         data={rows}
@@ -192,6 +221,9 @@ const ListenerMessages = () => {
             <FilterChip active={unchecked} onClick={() => setUnchecked(value => !value)}>
               No origin check
             </FilterChip>
+            <FilterChip active={bypassable} onClick={() => setBypassable(value => !value)}>
+              Bypassable
+            </FilterChip>
           </PanelToolbar>
         }
       />
@@ -208,7 +240,7 @@ const ListenerMessages = () => {
               )}
             </SheetTitle>
           </SheetHeader>
-          <div className="mt-4">{selected && <ListenerDetails listener={selected} />}</div>
+          <div className="mt-4">{selected && <ListenerDetails listener={selected} messages={messages} />}</div>
         </SheetContent>
       </Sheet>
     </PanelShell>

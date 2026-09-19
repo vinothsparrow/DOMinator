@@ -7,6 +7,7 @@ import refreshOnUpdate from 'virtual:reload-on-update-in-view';
 import { ThemeProvider } from '@root/src/shared/hooks/useTheme';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import ListenerMessages from '@root/src/pages/panel/ListenerMessages';
+import Findings from '@root/src/pages/panel/Findings';
 
 refreshOnUpdate('pages/panel');
 
@@ -21,6 +22,11 @@ const router = createBrowserRouter(
       path: '/listeners',
       loader: () => ({ message: 'Loading...!' }),
       element: <ListenerMessages />,
+    },
+    {
+      path: '/findings',
+      loader: () => ({ message: 'Loading...!' }),
+      element: <Findings />,
     },
     {
       path: '*',

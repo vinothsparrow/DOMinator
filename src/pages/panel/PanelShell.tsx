@@ -1,19 +1,31 @@
-import React from 'react';
-import { Braces, Download, Inbox, RotateCcw } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Braces, Download, FileText, Inbox, RotateCcw, Upload, ShieldAlert } from 'lucide-react';
 import { Nav } from '@src/components/ui/nav';
 import { cn } from '@src/lib/utils';
 import { ThemeToggle } from '@src/components/dominator/ThemeToggle';
 import { Brand } from '@src/components/dominator/Brand';
+import { ProbeControls } from '@src/components/dominator/ProbeControls';
+import { InterceptBanner } from '@src/components/dominator/InterceptBanner';
+import { InterceptRequest, SessionDump } from '@src/shared/types/message';
 
 interface PanelShellProps {
-  active: 'messages' | 'listeners';
+  active: 'messages' | 'listeners' | 'findings';
   messageCount: number;
   listenerCount: number;
   riskyCount: number;
+  findingCount?: number;
   url: string;
   connected: boolean;
+  intercepts?: InterceptRequest[];
   onClear: () => void;
   onExport: () => void;
+  onReport?: () => void;
+  onImport?: (dump: SessionDump) => void;
+  onResolveIntercept?: (
+    id: string,
+    action: 'deliver' | 'drop' | 'edit',
+    extra?: { origin?: string; data?: string; mode?: 'json' | 'text' },
+  ) => void;
   children: React.ReactNode;
 }
 
@@ -22,12 +34,29 @@ export function PanelShell({
   messageCount,
   listenerCount,
   riskyCount,
+  findingCount = 0,
   url,
   connected,
+  intercepts = [],
   onClear,
   onExport,
+  onReport,
+  onImport,
+  onResolveIntercept,
   children,
 }: PanelShellProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const importFile = async (file: File) => {
+    if (!onImport) return;
+    try {
+      const dump = JSON.parse(await file.text()) as SessionDump;
+      onImport(dump);
+    } catch {
+      /* ignore invalid files */
+    }
+  };
+
   return (
     <div className="flex h-full w-full bg-background text-foreground">
       <aside className="flex w-[200px] shrink-0 flex-col border-r">
@@ -51,6 +80,13 @@ export function PanelShell({
               icon: Braces,
               to: '/listeners',
               variant: active === 'listeners' ? 'default' : 'ghost',
+            },
+            {
+              title: 'Findings',
+              label: findingCount ? String(findingCount) : '',
+              icon: ShieldAlert,
+              to: '/findings',
+              variant: active === 'findings' ? 'default' : 'ghost',
             },
           ]}
         />
@@ -83,10 +119,49 @@ export function PanelShell({
             </button>
             <ThemeToggle className="h-7 w-7" />
           </div>
+          <div className="flex items-center gap-1.5">
+            {onReport && (
+              <button
+                type="button"
+                onClick={onReport}
+                title="Download a markdown findings report"
+                className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-md border text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground">
+                <FileText className="h-3 w-3" />
+                Report
+              </button>
+            )}
+            {onImport && (
+              <>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="application/json"
+                  className="hidden"
+                  onChange={event => {
+                    const file = event.target.files && event.target.files[0];
+                    if (file) void importFile(file);
+                    event.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  title="Load a previously exported session"
+                  className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-md border text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground">
+                  <Upload className="h-3 w-3" />
+                  Import
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col p-3">{children}</main>
+      <main className="flex min-w-0 flex-1 flex-col p-3">
+        <ProbeControls className="mb-2" />
+        {onResolveIntercept && <InterceptBanner intercepts={intercepts} onResolve={onResolveIntercept} />}
+        {children}
+      </main>
     </div>
   );
 }

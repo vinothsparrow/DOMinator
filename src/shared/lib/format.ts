@@ -1,4 +1,4 @@
-import { ExtensionListenerMessage, ExtensionPostMessage, RiskLevel, SourceLocation } from '@src/shared/types/message';
+import { ExtensionListenerMessage, ExtensionPostMessage, OriginCheckKind, RiskLevel, SourceLocation } from '@src/shared/types/message';
 
 export function formatTime(time: number): string {
   const date = new Date(time);
@@ -21,7 +21,7 @@ export function hostOf(url: string): string {
   if (url === 'null') return 'null (opaque)';
   try {
     return new URL(url).host || url;
-  } catch (e) {
+  } catch {
     return url;
   }
 }
@@ -62,6 +62,13 @@ export function matchesQuery(value: string, query: string): boolean {
   return value.toLowerCase().includes(query.toLowerCase());
 }
 
+/** `postMessage(null)` / empty string — noise, not a finding. */
+export function isEmptyMessage(message: ExtensionPostMessage): boolean {
+  if (message.dataType === 'null' || message.dataType === 'undefined') return true;
+  const text = (message.message || '').trim();
+  return text === '' || text === 'undefined';
+}
+
 export function messageHaystack(message: ExtensionPostMessage): string {
   return [
     message.message,
@@ -78,9 +85,21 @@ export function messageHaystack(message: ExtensionPostMessage): string {
 }
 
 export function listenerHaystack(listener: ExtensionListenerMessage): string {
-  return [listener.listener, listener.origin, listener.frame, listener.stack, listener.sinks.join(' ')]
+  return [
+    listener.listener,
+    listener.origin,
+    listener.frame,
+    listener.stack,
+    listener.sinks.join(' '),
+    listener.originCheck,
+    listener.originCheckDetail,
+  ]
     .filter(Boolean)
     .join(' ');
+}
+
+export function originCheckOf(listener: ExtensionListenerMessage): OriginCheckKind {
+  return listener.originCheck || (listener.checksOrigin ? 'strict' : 'none');
 }
 
 export function downloadJson(filename: string, data: unknown): void {
@@ -154,4 +173,22 @@ export function summarizeWrappers(wrappers?: string[]): { name: string; count: n
 /** Count of messages with a confirmed source-to-sink flow. */
 export function countConfirmed(messages: ExtensionPostMessage[]): number {
   return messages.filter(message => message.confirmed).length;
+}
+
+export function downloadText(filename: string, text: string, mime = 'text/plain'): void {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+export function formatLocationMapped(source?: SourceLocation): string {
+  if (!source) return '';
+  if (source.mapped) {
+    return `${source.mapped.fileName}:${source.mapped.line}:${source.mapped.column}`;
+  }
+  return formatLocation(source);
 }

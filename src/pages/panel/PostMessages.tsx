@@ -13,13 +13,16 @@ import {
   countConfirmed,
   countRisky,
   downloadJson,
+  downloadText,
   formatSize,
   formatTime,
   hostOf,
+  isEmptyMessage,
   matchesQuery,
   messageHaystack,
   messageInFrame,
 } from '@src/shared/lib/format';
+import { buildReport, sessionDump } from '@src/shared/lib/report';
 import { canReplay } from '@src/shared/lib/replay';
 import { Chip, EmptyState, RiskBadge, SourceLink } from '@src/components/dominator/primitives';
 import { MessageDetails } from '@src/components/dominator/items';
@@ -170,7 +173,8 @@ export const columns: ColumnDef<PanelTableFeatures, ExtensionPostMessage>[] = [
 ];
 
 const PostMessages = () => {
-  const { messages, listeners, url, connected, clear } = useDominator('devtools');
+  const { messages, listeners, intercepts, pollutions, clobbers, url, connected, clear, resolveIntercept, importSession } =
+    useDominator('devtools');
   const [query, setQuery] = useState('');
   const [direction, setDirection] = useState<Direction>('all');
   const [riskyOnly, setRiskyOnly] = useState(false);
@@ -187,6 +191,7 @@ const PostMessages = () => {
   const rows = useMemo(
     () =>
       messages
+        .filter(message => !isEmptyMessage(message))
         .filter(message => direction === 'all' || message.direction === direction)
         .filter(message => messageInFrame(message, frame))
         .filter(message => !riskyOnly || message.risk === 'high')
@@ -203,10 +208,26 @@ const PostMessages = () => {
       messageCount={messages.length}
       listenerCount={listeners.length}
       riskyCount={countRisky(messages, listeners)}
+      findingCount={pollutions.length + clobbers.length + messages.filter(m => m.leaks?.length).length}
       url={url}
       connected={connected}
+      intercepts={intercepts}
       onClear={clear}
-      onExport={() => downloadJson(`dominator-${hostOf(url)}-${Date.now()}.json`, { url, messages, listeners })}>
+      onExport={() =>
+        downloadJson(
+          `dominator-${hostOf(url)}-${Date.now()}.json`,
+          sessionDump(url, messages, listeners, pollutions, clobbers),
+        )
+      }
+      onReport={() =>
+        downloadText(
+          `dominator-${hostOf(url)}-${Date.now()}.md`,
+          buildReport(sessionDump(url, messages, listeners, pollutions, clobbers)),
+          'text/markdown',
+        )
+      }
+      onImport={importSession}
+      onResolveIntercept={resolveIntercept}>
       <DataTable
         columns={columns}
         data={rows}

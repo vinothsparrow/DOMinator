@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ClobberRecord,
   ExtensionCommand,
   ExtensionCommandType,
   ExtensionListenerMessage,
   ExtensionPostMessage,
+  InterceptRequest,
+  ListenerHit,
+  PollutionRecord,
+  SessionDump,
   SinkFlow,
 } from '@src/shared/types/message';
+import { isEmptyMessage } from '@src/shared/lib/format';
 
 const MAX_RECORDS = 500;
 
@@ -22,6 +28,10 @@ function append<T>(list: T[], record: T): T[] {
   return next;
 }
 
+function patchById<T extends { id: string }>(list: T[], id: string, patch: Partial<T>): T[] {
+  return list.map(item => (item.id === id ? { ...item, ...patch } : item));
+}
+
 /**
  * Opens one long-lived port to the background worker for the inspected tab and
  * keeps the captured postMessages / listeners in sync with it.
@@ -29,6 +39,9 @@ function append<T>(list: T[], record: T): T[] {
 export function useDominator(portName = 'client') {
   const [messages, setMessages] = useState<ExtensionPostMessage[]>([]);
   const [listeners, setListeners] = useState<ExtensionListenerMessage[]>([]);
+  const [intercepts, setIntercepts] = useState<InterceptRequest[]>([]);
+  const [pollutions, setPollutions] = useState<PollutionRecord[]>([]);
+  const [clobbers, setClobbers] = useState<ClobberRecord[]>([]);
   const [url, setUrl] = useState<string>('');
   const [tabId, setTabId] = useState<number>(-1);
   const [connected, setConnected] = useState(false);
@@ -37,25 +50,45 @@ export function useDominator(portName = 'client') {
   useEffect(() => {
     let disposed = false;
 
-    const handle = (payload: ExtensionCommand | ExtensionPostMessage | ExtensionListenerMessage | SinkFlow) => {
+    const handle = (
+      payload:
+        | ExtensionCommand
+        | ExtensionPostMessage
+        | ExtensionListenerMessage
+        | SinkFlow
+        | InterceptRequest
+        | ListenerHit
+        | PollutionRecord
+        | ClobberRecord
+        | { kind: string; id?: string; patch?: Partial<ExtensionListenerMessage> },
+    ) => {
       if (!payload) return;
       if (Object.hasOwn(payload, 'command')) {
         const command = payload as ExtensionCommand;
         if (command.command === ExtensionCommandType.initial) {
-          setMessages(command.messages ?? []);
+          setMessages((command.messages ?? []).filter(message => !isEmptyMessage(message)));
           setListeners(command.listeners ?? []);
+          setIntercepts(command.intercepts ?? []);
+          setPollutions(command.pollutions ?? []);
+          setClobbers(command.clobbers ?? []);
           if (command.url) setUrl(command.url);
         } else if (command.command === ExtensionCommandType.reload) {
           setMessages([]);
           setListeners([]);
+          setIntercepts([]);
+          setPollutions([]);
+          setClobbers([]);
         }
-      } else if (Object.hasOwn(payload, 'sink')) {
-        // Confirmed source-to-sink flow: fold it into the message it came from.
+        return;
+      }
+
+      const kind = (payload as { kind?: string }).kind;
+      if (kind === 'flow' || (Object.hasOwn(payload, 'sink') && kind !== 'message')) {
         const flow = payload as SinkFlow;
         setMessages(current =>
           current.map(message => {
             if (message.id !== flow.messageId) return message;
-            const flag = 'reached ' + flow.sink;
+            const flag = flow.blocked ? 'blocked ' + flow.sink : 'reached ' + flow.sink;
             return {
               ...message,
               flows: (message.flows || []).concat(flow),
@@ -65,10 +98,61 @@ export function useDominator(portName = 'client') {
             };
           }),
         );
-      } else if (Object.hasOwn(payload, 'listener')) {
+        return;
+      }
+      if (kind === 'intercept') {
+        setIntercepts(current => append(current, payload as InterceptRequest));
+        return;
+      }
+      if (kind === 'intercept-clear') {
+        const id = (payload as { id?: string }).id;
+        setIntercepts(current => current.filter(item => item.id !== id));
+        return;
+      }
+      if (kind === 'listener-hit') {
+        const hit = payload as ListenerHit;
+        setListeners(current =>
+          current.map(listener =>
+            listener.id === hit.listenerId
+              ? { ...listener, hitCount: (listener.hitCount || 0) + 1, lastHit: hit.time }
+              : listener,
+          ),
+        );
+        setMessages(current => {
+          for (let i = current.length - 1; i >= 0; i--) {
+            if (current[i].direction !== 'received') continue;
+            if (hit.time - current[i].time > 2000) break;
+            const hits = current[i].listenerHits || [];
+            if (hits.indexOf(hit.listenerId) !== -1) return current;
+            const next = current.slice();
+            next[i] = { ...current[i], listenerHits: hits.concat(hit.listenerId) };
+            return next;
+          }
+          return current;
+        });
+        return;
+      }
+      if (kind === 'listener-update') {
+        const update = payload as { id: string; patch?: Partial<ExtensionListenerMessage> };
+        if (update.id) setListeners(current => patchById(current, update.id, update.patch || {}));
+        return;
+      }
+      if (kind === 'pollution') {
+        setPollutions(current => append(current, payload as PollutionRecord));
+        return;
+      }
+      if (kind === 'clobber') {
+        setClobbers(current => append(current, payload as ClobberRecord));
+        return;
+      }
+      if (kind === 'listener' || Object.hasOwn(payload, 'listener')) {
         setListeners(current => append(current, payload as ExtensionListenerMessage));
-      } else if (Object.hasOwn(payload, 'message')) {
-        setMessages(current => append(current, payload as ExtensionPostMessage));
+        return;
+      }
+      if (kind === 'message' || Object.hasOwn(payload, 'message')) {
+        const message = payload as ExtensionPostMessage;
+        if (isEmptyMessage(message)) return;
+        setMessages(current => append(current, message));
       }
     };
 
@@ -77,7 +161,6 @@ export function useDominator(portName = 'client') {
       const port = chrome.runtime.connect({ name: portName });
       portRef.current = port;
       port.onMessage.addListener(handle);
-      // The service worker can be evicted; reconnect and resync when it is.
       port.onDisconnect.addListener(() => {
         portRef.current = null;
         setConnected(false);
@@ -104,6 +187,9 @@ export function useDominator(portName = 'client') {
     if (tabId < 0) return;
     setMessages([]);
     setListeners([]);
+    setIntercepts([]);
+    setPollutions([]);
+    setClobbers([]);
     portRef.current?.postMessage({ name: 'clear', tabId });
   }, [tabId]);
 
@@ -112,5 +198,56 @@ export function useDominator(portName = 'client') {
     portRef.current?.postMessage({ name: 'fetch', tabId });
   }, [tabId]);
 
-  return { messages, listeners, url, tabId, connected, clear, refresh };
+  const resolveIntercept = useCallback(
+    (interceptId: string, action: 'deliver' | 'drop' | 'edit', extra?: { origin?: string; data?: string; mode?: 'json' | 'text' }) => {
+      if (tabId < 0) return;
+      setIntercepts(current => current.filter(item => item.id !== interceptId));
+      portRef.current?.postMessage({
+        name: 'intercept-resolve',
+        tabId,
+        interceptId,
+        action,
+        origin: extra?.origin,
+        data: extra?.data,
+        mode: extra?.mode,
+      });
+    },
+    [tabId],
+  );
+
+  const importSession = useCallback(
+    (dump: SessionDump) => {
+      if (tabId < 0) return;
+      setMessages(dump.messages || []);
+      setListeners(dump.listeners || []);
+      setPollutions(dump.pollutions || []);
+      setClobbers(dump.clobbers || []);
+      setIntercepts([]);
+      if (dump.url) setUrl(dump.url);
+      portRef.current?.postMessage({
+        name: 'import',
+        tabId,
+        messages: dump.messages,
+        listeners: dump.listeners,
+        pollutions: dump.pollutions,
+        clobbers: dump.clobbers,
+      });
+    },
+    [tabId],
+  );
+
+  return {
+    messages,
+    listeners,
+    intercepts,
+    pollutions,
+    clobbers,
+    url,
+    tabId,
+    connected,
+    clear,
+    refresh,
+    resolveIntercept,
+    importSession,
+  };
 }

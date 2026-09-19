@@ -2,6 +2,7 @@ import React from 'react';
 import { Frame } from 'lucide-react';
 import { cn } from '@src/lib/utils';
 import { FrameOption } from '@src/shared/lib/format';
+import { highlightFrame } from '@src/shared/lib/replay';
 
 /**
  * Frame picker in the spirit of the DevTools console one: scopes the view to a
@@ -23,7 +24,11 @@ export function FrameSelect({
       <Frame className="pointer-events-none absolute left-2 h-3 w-3 text-muted-foreground" />
       <select
         value={value}
-        onChange={event => onChange(event.target.value)}
+        onChange={event => {
+          const next = event.target.value;
+          onChange(next);
+          if (next) highlightFrame(next);
+        }}
         title="Scope the view to one frame"
         className="h-8 w-full min-w-[150px] appearance-none truncate rounded-md border bg-background pl-7 pr-6 text-[11px] outline-none ring-offset-background transition-shadow focus-visible:ring-2 focus-visible:ring-ring">
         <option value="">All frames ({frames.length})</option>

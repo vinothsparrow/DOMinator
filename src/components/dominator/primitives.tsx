@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, Copy, ExternalLink, LucideIcon } from 'lucide-react';
 import { cn } from '@src/lib/utils';
 import { RiskLevel, SourceLocation } from '@src/shared/types/message';
-import { formatLocation, riskClass, riskDotClass, riskLabel } from '@src/shared/lib/format';
+import { formatLocation, formatLocationMapped, riskClass, riskDotClass, riskLabel } from '@src/shared/lib/format';
+import { resolveSourceLocation } from '@src/shared/lib/sourceMap';
 
 export function RiskDot({ risk, className }: { risk: RiskLevel; className?: string }) {
   return (
@@ -72,19 +73,38 @@ export function CopyButton({ value, label = 'Copy' }: { value: string; label?: s
  */
 export function SourceLink({ source, className }: { source?: SourceLocation; className?: string }) {
   const [copied, setCopied] = useState(false);
+  const mapKey = source ? `${source.file}:${source.line}:${source.column}` : '';
+  const [mappedByKey, setMappedByKey] = useState<Record<string, SourceLocation['mapped']>>({});
+
+  useEffect(() => {
+    if (!source || source.mapped) return;
+    let cancelled = false;
+    resolveSourceLocation(source).then(next => {
+      if (!cancelled && next.mapped) {
+        setMappedByKey(current => ({ ...current, [mapKey]: next.mapped }));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mapKey, source]);
+
   if (!source) {
     return <span className={cn('font-mono text-[11px] text-muted-foreground/60', className)}>source unknown</span>;
   }
 
+  const loc = source.mapped ? source : { ...source, mapped: mappedByKey[mapKey] };
   const canOpen = typeof chrome !== 'undefined' && !!chrome.devtools?.panels?.openResource;
+  const openFile = loc.mapped?.file || loc.file;
+  const openLine = loc.mapped?.line || loc.line;
 
   const onClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     if (canOpen) {
-      chrome.devtools.panels.openResource(source.file, Math.max(source.line - 1, 0), () => undefined);
+      chrome.devtools.panels.openResource(openFile, Math.max(openLine - 1, 0), () => undefined);
       return;
     }
-    navigator.clipboard.writeText(`${source.file}:${source.line}:${source.column}`).then(() => {
+    navigator.clipboard.writeText(`${openFile}:${openLine}:${loc.mapped?.column ?? loc.column}`).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     });
@@ -94,7 +114,7 @@ export function SourceLink({ source, className }: { source?: SourceLocation; cla
     <button
       type="button"
       onClick={onClick}
-      title={`${source.fn ? source.fn + ' — ' : ''}${source.file}:${source.line}:${source.column}`}
+      title={`${loc.fn ? loc.fn + ' — ' : ''}${openFile}:${openLine}:${loc.mapped?.column ?? loc.column}`}
       className={cn(
         'group inline-flex max-w-full items-center gap-1 truncate rounded-md border border-sky-500/30 bg-sky-500/10 px-1.5 py-px font-mono text-[11px] text-sky-700 transition-colors hover:bg-sky-500/20 dark:text-sky-300',
         className,
@@ -106,7 +126,10 @@ export function SourceLink({ source, className }: { source?: SourceLocation; cla
       ) : (
         <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-70" />
       )}
-      <span className="truncate">{formatLocation(source)}</span>
+      <span className="truncate">{formatLocationMapped(loc)}</span>
+      {loc.mapped && (
+        <span className="truncate text-[9px] text-muted-foreground">via {formatLocation(loc)}</span>
+      )}
     </button>
   );
 }
