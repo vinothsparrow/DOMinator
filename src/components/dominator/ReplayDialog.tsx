@@ -8,6 +8,7 @@ import { parseJson } from '@src/shared/lib/jsonPath';
 import { prettyJson } from '@src/shared/lib/diff';
 import { cn } from '@src/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@src/components/ui/sheet';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@src/components/ui/select';
 import { JsonTree } from './JsonTree';
 import { DiffView } from './DiffView';
 
@@ -209,21 +210,23 @@ function ReplayForm({ message, frames }: { message: ExtensionPostMessage; frames
           {payload !== message.message && <DiffView before={message.message} after={payload} />}
 
           <div className="grid grid-cols-2 gap-3">
-            <label className="space-y-1">
+            <div className="space-y-1">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Target frame
               </span>
-              <select
-                value={target}
-                onChange={event => setTarget(event.target.value)}
-                className="h-8 w-full rounded-md border bg-background px-2 text-[11px] outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
-                {targetOptions.map(option => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <Select value={target} onValueChange={setTarget}>
+                <SelectTrigger className="h-8 w-full text-[11px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-[200]" position="popper">
+                  {targetOptions.map(option => (
+                    <SelectItem key={option} value={option} className="text-xs">
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <label className="space-y-1">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 targetOrigin
@@ -237,20 +240,22 @@ function ReplayForm({ message, frames }: { message: ExtensionPostMessage; frames
             </label>
           </div>
 
-          <label className="space-y-1">
+          <div className="space-y-1">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Origin presented to listeners
             </span>
-            <select
-              value={spoof}
-              onChange={event => setSpoof(event.target.value as OriginSpoofMode | 'page')}
-              className="h-8 w-full rounded-md border bg-background px-2 text-[11px] outline-none">
-              {SPOOF.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <Select value={spoof} onValueChange={next => setSpoof(next as OriginSpoofMode | 'page')}>
+              <SelectTrigger className="h-8 w-full text-[11px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="z-[200]" position="popper">
+                {SPOOF.map(option => (
+                  <SelectItem key={option.value} value={option.value} className="text-xs">
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {spoof === 'custom' && (
               <input
                 value={customOrigin}
@@ -265,7 +270,7 @@ function ReplayForm({ message, frames }: { message: ExtensionPostMessage; frames
                 bypassable origin check. Real <code>postMessage</code> cannot spoof origin.
               </p>
             )}
-          </label>
+          </div>
 
           <button
             type="button"

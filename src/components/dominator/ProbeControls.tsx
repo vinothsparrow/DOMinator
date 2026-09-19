@@ -5,6 +5,7 @@ import { instrumentationStorage, mergeInstrumentation } from '@src/shared/storag
 import { OriginSpoofMode } from '@src/shared/types/message';
 import { Switch } from './Switch';
 import { cn } from '@src/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@src/components/ui/select';
 
 const SPOOF: { value: OriginSpoofMode; label: string }[] = [
   { value: 'off', label: 'Origin: real' },
@@ -43,20 +44,23 @@ export function ProbeControls({ className }: { className?: string }) {
           label="Inject canaries into live payloads"
         />
       </span>
-      <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px]">
-        <ShieldAlert className="h-3 w-3 text-muted-foreground" />
-        <select
-          value={config.spoofOrigin}
-          onChange={event => set({ spoofOrigin: event.target.value as OriginSpoofMode })}
+      <Select
+        value={config.spoofOrigin}
+        onValueChange={next => set({ spoofOrigin: next as OriginSpoofMode })}>
+        <SelectTrigger
           title="Origin presented to listeners"
-          className="bg-transparent text-[10px] outline-none">
+          className="h-7 w-[150px] gap-1 px-2 text-[10px]">
+          <ShieldAlert className="h-3 w-3 shrink-0 text-muted-foreground" />
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="z-[200]" position="popper">
           {SPOOF.map(option => (
-            <option key={option.value} value={option.value}>
+            <SelectItem key={option.value} value={option.value} className="text-xs">
               {option.label}
-            </option>
+            </SelectItem>
           ))}
-        </select>
-      </span>
+        </SelectContent>
+      </Select>
       {config.spoofOrigin === 'custom' && (
         <input
           value={config.spoofCustom}
