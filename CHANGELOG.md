@@ -4,6 +4,15 @@ All notable changes to DOMinator are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-09-20
+
+### Fixed
+
+- The manifest description was 190 characters, over the Chrome Web Store's
+  132-character limit, so the 1.0.0 package could not be uploaded. It is now a
+  129-character summary, and `utils/package.js` fails the build rather than
+  producing a zip the store will reject.
+
 ## [1.0.0] - 2026-09-20
 
 First public release, submitted to the Chrome Web Store and to addons.mozilla.org.
@@ -45,4 +54,5 @@ First public release, submitted to the Chrome Web Store and to addons.mozilla.or
 - **Headless access** through `window.__DOMINATOR__.dump()` for Playwright runs.
 - **Firefox build** (`npm run build:firefox`), loadable as a temporary add-on.
 
+[1.0.1]: https://github.com/vinothsparrow/DOMinator/releases/tag/v1.0.1
 [1.0.0]: https://github.com/vinothsparrow/DOMinator/releases/tag/v1.0.0
