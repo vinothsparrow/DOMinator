@@ -22,6 +22,7 @@
     "package:firefox": "npm run build:firefox && node utils/package.js firefox",
     "pages": "node utils/build-pages.js",
     "screenshots": "node utils/screenshots/capture.js",
+    "promo": "node utils/screenshots/promo.js",
     "commitlint": "commitlint --edit",
     "lint": "eslint src",
     "prettier": "prettier . --write"
