@@ -40,6 +40,22 @@ if (manifest.version !== version) {
   process.exit(1);
 }
 
+// The stores reject the upload, not the build, so check the limits here: a rejected
+// zip costs a round trip through the dashboard.
+const LIMITS = { name: 45, description: 132 };
+for (const locale of fs.readdirSync(path.join(distDir, '_locales'))) {
+  const messagesPath = path.join(distDir, '_locales', locale, 'messages.json');
+  const messages = JSON.parse(fs.readFileSync(messagesPath, 'utf8'));
+  for (const [field, limit] of Object.entries(LIMITS)) {
+    const key = field === 'name' ? 'extensionName' : 'extensionDescription';
+    const value = messages[key]?.message ?? '';
+    if (value.length > limit) {
+      console.error(`_locales/${locale}: ${key} is ${value.length} characters, the store limit is ${limit}.`);
+      process.exit(1);
+    }
+  }
+}
+
 fs.mkdirSync(releasesDir, { recursive: true });
 const zipPath = path.join(releasesDir, `dominator-${target}-${version}.zip`);
 fs.rmSync(zipPath, { force: true });

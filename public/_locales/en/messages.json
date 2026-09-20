@@ -1,7 +1,7 @@
 {
   "extensionDescription": {
-    "description": "Extension description",
-    "message": "DOMinator is a powerful Chrome extension designed to assist developers and security professionals in testing and identifying DOM-based Cross-Site Scripting (XSS) vulnerabilities on websites."
+    "description": "Extension description (Chrome Web Store limit: 132 characters)",
+    "message": "DevTools for DOM XSS hunting: capture postMessage traffic, audit listener origin checks, trace taint into sinks, replay payloads."
   },
   "extensionName": {
     "description": "Extension name",
