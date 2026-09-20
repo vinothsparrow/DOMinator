@@ -1431,35 +1431,6 @@ import type {
     return nativeRemoveEventListener.call(this || window, type, fn, arguments[2]);
   }
 
-  function hookEventTarget(target, channel: ExtensionPostMessage['channel']) {
-    try {
-      const nativeAEL = target.addEventListener.bind(target);
-      const nativeREL = target.removeEventListener && target.removeEventListener.bind(target);
-      target.addEventListener = function (type, listener, options) {
-        if (type === 'message' && listener) {
-          const normalized = normalizeListener(listener);
-          if (normalized) {
-            const wrapped = captureListener(normalized.fn, captureStack(), window, normalized.via, channel);
-            return nativeAEL(type, wrapped, options);
-          }
-        }
-        return nativeAEL(type, listener, options);
-      };
-      if (nativeREL) {
-        target.removeEventListener = function (type, listener, options) {
-          let fn = listener;
-          if (type === 'message' && listener) {
-            const wrapped = wrappersByOriginal.get(typeof listener === 'function' ? listener : listener.handleEvent);
-            if (wrapped) fn = wrapped;
-          }
-          return nativeREL(type, fn, options);
-        };
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-
   try {
     Window.prototype.addEventListener = hookedAddEventListener;
   } catch {

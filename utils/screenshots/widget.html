@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body { margin: 0; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 1rem; color: #1a1c21; }
+      button { font: inherit; padding: .4rem .9rem; border-radius: 6px; border: 1px solid #c8cdd7; background: #fff; }
+    </style>
+  </head>
+  <body>
+    <p>Card ending 4242 — <strong>authorised</strong></p>
+    <button id="pay">Pay $49.00</button>
+    <script>
+      function send() {
+        // Wildcard targetOrigin, and markup in the payload: two of the risk flags.
+        parent.postMessage({ type: 'order-status', html: '<b>Payment authorised</b> — order ord_4812' }, '*');
+        parent.postMessage({ type: 'prefs', value: { theme: 'dark', locale: 'en-GB' } }, '*');
+        // Prototype pollution: a __proto__ key that survives JSON.parse and reaches Object.assign.
+        parent.postMessage({ type: 'prefs', value: JSON.parse('{"theme":"dark","__proto__":{"isAdmin":true}}') }, '*');
+      }
+      send();
+      setInterval(send, 4000);
+      document.getElementById('pay').addEventListener('click', send);
+      window.addEventListener('message', function onCommand(event) {
+        if (event.data && event.data.type === 'widget-command') {
+          document.body.insertAdjacentHTML('beforeend', '<p>' + event.data.label + '</p>');
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -6,6 +6,8 @@
 
 # build
 /dist
+/releases
+/_site
 
 # etc
 .DS_Store

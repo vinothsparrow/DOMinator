@@ -48,6 +48,9 @@ export default [
       ...reactHooks.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off',
       'import/no-unresolved': 'off',
+      // TypeScript checks the props of every component; runtime propTypes would be
+      // a second, weaker source of truth for the same thing.
+      'react/prop-types': 'off',
     },
   },
   prettierConfig,

@@ -1,0 +1,54 @@
+name: Pages
+
+# Publishes the privacy policy (and the README / changelog) to
+# https://vinothsparrow.github.io/DOMinator/ — the privacy policy URL the
+# extension stores require has to stay reachable for as long as the listing is up.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "README.md"
+      - "PRIVACY.md"
+      - "CHANGELOG.md"
+      - "public/*.png"
+      - "utils/build-pages.js"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One publish at a time; do not cancel a running one, the site would be left half-updated.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - run: npm ci
+
+      - run: npm run pages
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

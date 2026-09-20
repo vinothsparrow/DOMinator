@@ -1,4 +1,4 @@
-import { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 import { cn } from '@src/lib/utils';
 import { buttonVariants } from '@src/components/ui/button';

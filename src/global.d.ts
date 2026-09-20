@@ -9,8 +9,8 @@ declare module 'virtual:reload-on-update-in-view' {
 }
 
 declare module '*.svg' {
-  import React = require('react');
-  export const ReactComponent: React.SFC<React.SVGProps<SVGSVGElement>>;
+  import type { FunctionComponent, SVGProps } from 'react';
+  export const ReactComponent: FunctionComponent<SVGProps<SVGSVGElement>>;
   const src: string;
   export default src;
 }

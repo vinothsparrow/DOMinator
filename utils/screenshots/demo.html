@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Checkout — payments demo</title>
+    <style>
+      body { margin: 0; font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f6f7f9; color: #1a1c21; }
+      header { background: #1d2433; color: #fff; padding: 1rem 2rem; font-weight: 600; }
+      main { max-width: 52rem; margin: 2rem auto; padding: 0 1rem; display: grid; gap: 1.25rem; }
+      section { background: #fff; border: 1px solid #e3e6ec; border-radius: 10px; padding: 1.25rem 1.5rem; }
+      h2 { margin: 0 0 .5rem; font-size: 1rem; }
+      p { margin: .25rem 0; color: #5b6270; }
+      iframe { width: 100%; height: 120px; border: 1px solid #e3e6ec; border-radius: 8px; }
+      #widget-output { min-height: 1.5rem; }
+    </style>
+  </head>
+  <body>
+    <!-- A local target for DOMinator screenshots and manual testing. Everything here
+         is deliberately vulnerable; it is never shipped in the extension package. -->
+    <header>demo-shop.test — checkout</header>
+    <main>
+      <section>
+        <h2>Payment widget</h2>
+        <iframe id="pay" src="widget.html" title="payment widget"></iframe>
+      </section>
+      <section>
+        <h2>Order status</h2>
+        <p id="widget-output">waiting for the widget…</p>
+      </section>
+      <section>
+        <h2>Preferences</h2>
+        <p id="prefs">theme: default</p>
+        <!-- DOM clobbering: shadows document.getElementById for scripts that expect the function -->
+        <a id="getElementById" href="#">saved cards</a>
+      </section>
+    </main>
+
+    <script src="app.js" defer></script>
+    <script>
+      // 1. No origin check at all, and the payload reaches innerHTML.
+      window.addEventListener('message', function onStatus(event) {
+        const data = typeof event.data === 'object' && event.data ? event.data : {};
+        if (data.type === 'order-status') {
+          document.getElementById('widget-output').innerHTML = data.html;
+        }
+      });
+
+      // 2. A prefix check that startsWith makes bypassable, feeding a prototype-pollution merge.
+      window.addEventListener('message', function onPrefs(event) {
+        if (!String(event.origin).startsWith('https://demo-shop.test')) return;
+        const data = event.data || {};
+        if (data.type === 'prefs') {
+          const prefs = {};
+          Object.assign(prefs, data.value);
+          document.getElementById('prefs').textContent = 'theme: ' + (prefs.theme || 'default');
+        }
+      });
+
+      // 3. A strict check, for contrast in the listener list.
+      window.addEventListener('message', function onAnalytics(event) {
+        if (event.origin !== 'https://analytics.demo-shop.test') return;
+        console.debug('analytics', event.data);
+      });
+
+      // Taint source: the hash lands in a message payload.
+      const tracking = location.hash.slice(1) || 'ref=email';
+
+      function heartbeat() {
+        window.postMessage({ type: 'checkout-ping', tracking: tracking, cart: { id: 'ord_4812', total: 49.0 } }, '*');
+      }
+      heartbeat();
+      setInterval(heartbeat, 4000);
+
+      const channel = new BroadcastChannel('checkout');
+      channel.postMessage({ type: 'cart-sync', items: 2 });
+    </script>
+  </body>
+</html>

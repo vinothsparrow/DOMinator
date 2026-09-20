@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Copy, ExternalLink, LucideIcon } from 'lucide-react';
+import { Check, Copy, ExternalLink } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { cn } from '@src/lib/utils';
 import { RiskLevel, SourceLocation } from '@src/shared/types/message';
 import { formatLocation, formatLocationMapped, riskClass, riskDotClass, riskLabel } from '@src/shared/lib/format';
@@ -127,9 +128,7 @@ export function SourceLink({ source, className }: { source?: SourceLocation; cla
         <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-70" />
       )}
       <span className="truncate">{formatLocationMapped(loc)}</span>
-      {loc.mapped && (
-        <span className="truncate text-[9px] text-muted-foreground">via {formatLocation(loc)}</span>
-      )}
+      {loc.mapped && <span className="truncate text-[9px] text-muted-foreground">via {formatLocation(loc)}</span>}
     </button>
   );
 }

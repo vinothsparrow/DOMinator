@@ -7,7 +7,7 @@ import { hostOf } from '@src/shared/lib/format';
 function iconUrl(): string {
   try {
     return chrome.runtime.getURL('icon128.png');
-  } catch (e) {
+  } catch {
     return '';
   }
 }
