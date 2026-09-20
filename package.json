@@ -1,6 +1,6 @@
 {
   "name": "dominator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Chrome extension designed to assist developers and security professionals in testing and identifying DOM-based Cross-Site Scripting (XSS) vulnerabilities on websites.",
   "license": "MIT",
   "repository": {
