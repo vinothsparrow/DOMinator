@@ -1,7 +1,12 @@
 # Chrome Web Store listing — DOMinator
 
 Paste-ready copy for the Developer Dashboard. Regenerate the images with
-`npm run screenshots` and `node utils/screenshots/promo.js`.
+`npm run screenshots` and `npm run promo`.
+
+> Do not name third-party products in the description. The first submission was
+> rejected under "Spam and placement in the Store" (reference Yellow Argon) for
+> listing the libraries whose wrappers DOMinator unwraps: the store read the
+> names as excessive keywords. Describe the capability instead.
 
 ---
 
@@ -39,11 +44,11 @@ For each addEventListener('message', ...), window.onmessage or handleEvent, DOMi
 • bypassable — startsWith, endsWith, indexOf, includes or an unanchored regex
 • source — event.source === parent or opener instead of an origin check
 
-It also lists the dangerous sinks in the handler body (innerHTML, document.write, eval, location, srcdoc, jQuery html(), storage and cookie writes, relays, DOMParser, dynamic import) and unwraps handlers wrapped by Sentry, Raven, New Relic, Rollbar, Bugsnag or jQuery so you see the real listener.
+It also lists the dangerous sinks in the handler body (innerHTML, document.write, eval, location, srcdoc, HTML helpers, storage and cookie writes, relays, DOMParser, dynamic import). Handlers that an error-reporting or utility library has wrapped are unwrapped, so the list shows the listener you wrote rather than the wrapper around it.
 
 FINDINGS
 
-• Prototype pollution through Object.assign, jQuery.extend and lodash merge / defaultsDeep.
+• Prototype pollution through the object-merge helpers that carry it: Object.assign and the deep-merge functions utility libraries provide.
 • DOM clobbering: id and name attributes that overwrite globals.
 • URL and DOM taint sources: location.hash / search / href, document.referrer, window.name, history.pushState.
 
@@ -53,7 +58,7 @@ ACTIVE TESTING
 • Intercept — pause a message inside the handler, edit the origin and payload, then deliver or drop it. One-shot handshake messages no longer sail past you.
 • Auto-probe — hit each new listener with a unique canary, a nested JSON probe and a __proto__ payload. Off by default.
 • Dynamic sink trace — taint survives JSON, URI encoding, base64, replace, split/join and case transforms. Assignments blocked by Trusted Types or CSP are recorded as blocked rather than dropped.
-• Generated proof of concept — per listener, as an iframe, a window.open / opener page, or a console or Burp snippet.
+• Generated proof of concept — per listener, as an iframe, a window.open / opener page, or a snippet for the console or an intercepting proxy.
 
 VIEWS AND EXPORT
 
@@ -142,7 +147,7 @@ or for lending.
 ```
 No account or login is needed.
 
-1. Open any page that embeds third-party widgets or iframes — a page with an embedded YouTube player, a payment widget or a chat widget all send postMessage traffic on load.
+1. Open any page that embeds third-party widgets or iframes — a page with an embedded video player, a payment widget or a chat widget all send postMessage traffic on load.
 2. Open DevTools and select the DOMinator panel.
 3. Reload the page. Messages appear in the Messages tab as they are captured, with the sender's file and line; Listeners shows each message handler and the kind of origin check it performs; Findings shows confirmed sink flows, prototype pollution and DOM clobbering.
 4. The popup on the toolbar icon shows the same capture for the active tab.
