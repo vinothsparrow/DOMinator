@@ -22,22 +22,32 @@ payloads.
 
 ### Description
 
-Short on purpose: the store asks for a clear description, not a feature dump,
-and a list of names is what got the first submission rejected.
+Follows the format of the earlier iframe-broker listing that was approved: what
+it does and how to open it, then the links. No feature dump, no product names.
 
 ```
-DOMinator is a DevTools panel for finding DOM-based XSS in a page's postMessage traffic.
+DOMinator shows you the cross window/frame communication happening behind the current tab, and whether any of it is dangerous. Every postMessage a window or frame sends or receives is recorded with its origin, its frame and the file and line that sent it. For each message handler it shows the kind of origin check the handler performs — none, strict, or bypassable, such as a prefix match — and marks the flow as confirmed when a value from a message reaches a sink like innerHTML.
 
-It records every message the tab sends and receives, with the origin, the frame, and the file and line that sent it. For each message handler it shows where the handler was registered, what kind of origin check it performs — none, strict, or bypassable, such as a prefix match — and which dangerous sinks it can reach. When a value from a message actually reaches one of those sinks, the flow is marked as confirmed.
+Open the DOMinator panel in DevTools to inspect a message, replay it with an edited payload and a chosen origin, or pause it in the handler before it is delivered. Or click the extension icon to see the messages for the current tab.
 
-You can then test what you found: replay a captured message with an edited payload and a chosen origin, pause a message inside the handler and change it before it is delivered, or generate a proof of concept for a listener.
+Nothing leaves your browser: no account, no server, no analytics.
 
-Everything stays in your browser. There is no account, no server and no analytics, and nothing is transmitted.
+Replay and probing send payloads into the page you have open in DevTools, so use DOMinator only on sites you own or are authorised to test.
 
-Replay and probing act on the page you have open in DevTools, so use DOMinator only on sites you own or are authorised to test.
+***
+https://github.com/vinothsparrow/DOMinator
+Free.
+Open-source with public license (MIT)
 
-Open source (MIT): https://github.com/vinothsparrow/DOMinator
-Privacy policy: https://vinothsparrow.github.io/DOMinator/privacy.html
+***
+Privacy policy:
+https://vinothsparrow.github.io/DOMinator/privacy.html
+
+Project changelog:
+https://github.com/vinothsparrow/DOMinator/releases
+
+Contributors @ Github:
+https://github.com/vinothsparrow/DOMinator/graphs/contributors
 ```
 
 ### Graphic assets
