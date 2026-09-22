@@ -22,59 +22,22 @@ payloads.
 
 ### Description
 
+Short on purpose: the store asks for a clear description, not a feature dump,
+and a list of names is what got the first submission rejected.
+
 ```
-DOMinator is a DevTools panel for developers and security testers who need to see what a page's postMessage traffic is actually doing — and whether a message can reach a dangerous sink.
+DOMinator is a DevTools panel for finding DOM-based XSS in a page's postMessage traffic.
 
-It installs hooks in the page, records every message the tab sends and receives, and shows the result live in a DevTools panel and in the toolbar popup.
+It records every message the tab sends and receives, with the origin, the frame, and the file and line that sent it. For each message handler it shows where the handler was registered, what kind of origin check it performs — none, strict, or bypassable, such as a prefix match — and which dangerous sinks it can reach. When a value from a message actually reaches one of those sinks, the flow is marked as confirmed.
 
-WHAT IT CAPTURES
+You can then test what you found: replay a captured message with an edited payload and a chosen origin, pause a message inside the handler and change it before it is delivered, or generate a proof of concept for a listener.
 
-• Every window.postMessage call and every message event: direction, origin to target, sending and receiving frame, payload type and size, and the transfer list.
-• The call site of each send as file:line:column, with the full stack. Inside DevTools the location opens the file in Sources, resolved through the source map when one is reachable.
-• Receives paired with the send that produced them, so a receive shows the sender's file and line too.
-• Channels beyond window: MessagePort, BroadcastChannel, Worker, SharedWorker and ServiceWorker.
-• Risk flags: wildcard targetOrigin, markup or script-like payloads, cross-origin traffic, confirmed sink flows, and cross-origin leaks of location.href, cookies or token-like keys.
+Everything stays in your browser. There is no account, no server and no analytics, and nothing is transmitted.
 
-LISTENER ANALYSIS
-
-For each addEventListener('message', ...), window.onmessage or handleEvent, DOMinator shows where it was registered and what kind of origin check it performs — not a yes/no, but which kind:
-
-• none — no check at all
-• strict — === or an allowlist helper
-• bypassable — startsWith, endsWith, indexOf, includes or an unanchored regex
-• source — event.source === parent or opener instead of an origin check
-
-It also lists the dangerous sinks in the handler body (innerHTML, document.write, eval, location, srcdoc, HTML helpers, storage and cookie writes, relays, DOMParser, dynamic import). Handlers that an error-reporting or utility library has wrapped are unwrapped, so the list shows the listener you wrote rather than the wrapper around it.
-
-FINDINGS
-
-• Prototype pollution through the object-merge helpers that carry it: Object.assign and the deep-merge functions utility libraries provide.
-• DOM clobbering: id and name attributes that overwrite globals.
-• URL and DOM taint sources: location.hash / search / href, document.referrer, window.name, history.pushState.
-
-ACTIVE TESTING
-
-• Replay — re-send any captured message with an edited payload, a chosen target frame and a chosen presented origin. Nested JSON opens as a tree with per-field injection. Presenting an attacker origin is how you prove that a startsWith or endsWith origin check is bypassable.
-• Intercept — pause a message inside the handler, edit the origin and payload, then deliver or drop it. One-shot handshake messages no longer sail past you.
-• Auto-probe — hit each new listener with a unique canary, a nested JSON probe and a __proto__ payload. Off by default.
-• Dynamic sink trace — taint survives JSON, URI encoding, base64, replace, split/join and case transforms. Assignments blocked by Trusted Types or CSP are recorded as blocked rather than dropped.
-• Generated proof of concept — per listener, as an iframe, a window.open / opener page, or a snippet for the console or an intercepting proxy.
-
-VIEWS AND EXPORT
-
-Frame picker scoped to top or any nested frame, filters for direction, high risk, confirmed flows, missing or bypassable origin checks, free-text search, JSON export and import, and a markdown findings report per tab. The toolbar badge shows the message count and turns red on high-risk traffic. Sessions survive service-worker restarts.
-
-For headless runs, the page exposes window.__DOMINATOR__.dump().
-
-PRIVACY
-
-DOMinator has no account, no server and no analytics. Captured traffic stays in your browser: session storage for the capture, local storage for your settings, nothing synced, nothing transmitted. The only network request it makes is fetching a script's source map from the site you are inspecting, when you click a call site. Full policy: https://vinothsparrow.github.io/DOMinator/privacy.html
-
-SCOPE OF USE
-
-This is a testing tool. Replay, intercept and auto-probe send payloads into the page you are inspecting, and they are off until you switch them on. Use it only on sites you own or are authorised to test.
+Replay and probing act on the page you have open in DevTools, so use DOMinator only on sites you own or are authorised to test.
 
 Open source (MIT): https://github.com/vinothsparrow/DOMinator
+Privacy policy: https://vinothsparrow.github.io/DOMinator/privacy.html
 ```
 
 ### Graphic assets
