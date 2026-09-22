@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DOMinator promo tile</title>
+    <style>
+      /* One template for both Chrome Web Store tiles: 440x280 and 1400x560.
+         The layout switches on viewport width, so each size is a screenshot of
+         this page at that size — see promo.js. */
+      * { box-sizing: border-box; margin: 0; }
+      html, body { height: 100%; }
+      body {
+        display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(120% 140% at 15% 0%, #253046 0%, #14161a 55%, #0d0f12 100%);
+        color: #e7e9ee;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        overflow: hidden;
+      }
+      .tile { display: flex; align-items: center; gap: 4%; width: 100%; max-width: 88%; }
+      img { width: 15%; max-width: 200px; min-width: 64px; border-radius: 22%; box-shadow: 0 8px 30px rgba(0,0,0,.45); }
+      .copy { flex: 1; }
+      h1 { font-size: 3.6vw; letter-spacing: -0.02em; line-height: 1; }
+      p { margin-top: 2.5%; font-size: 1.4vw; line-height: 1.45; color: #aeb6c6; }
+      .short { display: none; }
+      .badges { margin-top: 4%; display: flex; gap: 2%; flex-wrap: wrap; }
+      .badges span {
+        font-size: 1.05vw; padding: 0.45em 0.9em; border-radius: 999px;
+        border: 1px solid #38405288; background: #1b1f27; color: #c6cdda; white-space: nowrap;
+      }
+      .badges .hot { border-color: #b8455f; color: #ff8fa6; background: #2a1620; }
+      /* Small tile: no room for prose. */
+      /* Small tile: room for a mark, a name and one short line. */
+      @media (max-width: 700px) {
+        .tile { flex-direction: column; gap: 4%; text-align: center; max-width: 84%; }
+        img { width: 26%; }
+        h1 { font-size: 11vw; }
+        p { font-size: 4vw; margin-top: 2%; }
+        .long { display: none; }
+        .short { display: block; }
+        .badges { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tile">
+      <img src="../../public/icon128.png" alt="" />
+      <div class="copy">
+        <h1>DOMinator</h1>
+        <p class="long">Hunt DOM XSS in postMessage handlers — capture the traffic, audit every origin check, watch tainted values reach a sink, then replay the payload.</p>
+        <p class="short">DOM XSS hunting for postMessage</p>
+        <div class="badges">
+          <span>postMessage capture</span>
+          <span>origin-check analysis</span>
+          <span class="hot">sink tracing</span>
+          <span>replay &amp; intercept</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
